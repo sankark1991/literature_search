@@ -12,13 +12,14 @@ def add_new_entry(D):
     year = int(input('Type the reference year. '))
     month = int(input('Type the reference month. '))
     arxiv = input('Type the arXiv identifier. ')
+    title = input('Type the paper title. ')
     authors = input("Type the list of author last names, separated by commas (no spaces). ").split(',')
     tags = input("Add tags, separated by ' ; '.").split(' ; ')
     name = input("Type the reference handle, or type x if you would like one automatically generated. ")
     if name == 'x':
         name = f"{authors[0]}-{year}-{month}"
 
-    print("Type the handles for the important papers which this paper cites. Type 'done' when finished.")
+    print("Type the handles for the important papers which this paper cites. Type 'done' when finished. ")
     parents = []
     while True:
         X = input()
@@ -28,7 +29,7 @@ def add_new_entry(D):
             parents.append(X)
 
 
-    print("Type the handles for the important papers which cite this paper. Type 'done' when finished.")
+    print("Type the handles for the important papers which cite this paper. Type 'done' when finished. ")
     children = []
     while True:
         X = input()
@@ -39,13 +40,17 @@ def add_new_entry(D):
         else:
             children.append(X)
 
+    notes = input("Type some notes. ")
+
     D[name] = {'year': year,
                'month': month,
                'arxiv': arxiv,
-               'authors': authors,
-               'tags': tags,
+               'title': title,
+               'authors': set(authors),
+               'tags': set(tags),
                'parents': parents,
-               'children': children}
+               'children': children,
+               'notes': f"{notes}\n"}
 
     for c in children:
         if c in D.keys():
@@ -66,14 +71,46 @@ def delete_entry(D):
         d['parents'].remove(name)
         d['children'].remove(name)
 
-# Rename a paper TODO
-def rename(D, name):
-    pass
-
 # Modify an entry TODO
-def modify_entry(d):
+def modify_entry(D, name):
+    while True:
+        print_str = "\nWhat would you like to do?"
+        print_str += "\nauth = change authors"
+        print_str += "\nname = change handle"
+        print_str += "\ntitle = change title"
+        print_str += "\nnotes = add notes"
+        print_str += "\nx = exit"
+        X = input(print_str + "\n")
+        if X == 'x':
+            break
+        elif X == 'auth':
+            change_authors(D, name)
+        elif X == 'name':
+            change_name(D, name)
+        elif X == 'title':
+            change_title(D, name)
+        elif X == 'notes':
+            add_notes(D, name)
 
-    pass
+        else:
+            print('Command not understood. ')
+
+def change_title(D, name):
+    title = input('Type the paper title. ')
+    D[name]['title'] = title
+
+def change_authors(D, name):
+    authors = input("Type the list of author last names, separated by commas (no spaces). ").split(',')
+    D[name]['authors'] = set(authors)
+
+def change_name(D, name):
+    new_name = input("Type the reference handle, or type x if you would like one automatically generated. ")
+    D[new_name] = D[name]
+    del D[name]
+
+def add_notes(D, name):
+    notes = input("Type some notes. ")
+    D['notes'] += f"{notes}\n"
 
 def create_database(filename):
     f = open(f"{filename}.pckl", 'wb')
@@ -111,8 +148,9 @@ def main(args):
         elif X == 'rm':
             delete_entry(D)
         elif X == 'ls':
-            for k in D.keys():
-                print(k)
+            chronological = sorted([k for k in D.keys()], key=lambda x: (D[x]['year'], D[x]['month']))
+            for k in chronological:
+                print(f"{k:<20}: {D[k]['title']}")
             print("")
         elif X[:4] == 'open':
             print("")
@@ -121,10 +159,9 @@ def main(args):
                 print(f"{k}: {d[k]}")
             print("")
         elif X[:3] == 'mod':
-            d = D[X[4:]]
-            modify_entry(d)
+            modify_entry(D, X[4:])
         else:
-            print('Command not understood.')
+            print('Command not understood. ')
 
     f = open(f"{filename}.pckl", 'wb')
     pickle.dump(D, f)
